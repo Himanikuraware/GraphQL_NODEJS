@@ -1,5 +1,4 @@
 import React, { useState, useEffect, Fragment } from "react";
-import openSocket from "socket.io-client";
 
 import Post from "../../components/Feed/Post/Post";
 import Button from "../../components/Button/Button";
@@ -37,49 +36,7 @@ const Feed = (props) => {
 
     fetchStatus();
     loadPosts();
-    const socket = openSocket("http://localhost:8080");
-    socket.on("posts", (data) => {
-      if (data.action === "create") {
-        addPost(data.post);
-      } else if (data.action === "update") {
-        updatePost(data.post);
-      } else if (data.action === "delete") {
-        loadPosts();
-      }
-    });
   }, []);
-
-  const addPost = (post) => {
-    setPosts((prevPosts) => {
-      const updatedPosts = [...prevPosts];
-
-      if (postPage === 1) {
-        if (prevPosts.length >= 2) {
-          updatedPosts.pop();
-        }
-        updatedPosts.unshift(post);
-      }
-
-      return updatedPosts;
-    });
-
-    setTotalPosts((prevTotalPosts) => prevTotalPosts + 1);
-  };
-
-  const updatePost = (post) => {
-    setPosts((prevPosts) => {
-      const updatedPosts = [...prevPosts];
-      const updatedPostIndex = updatedPosts.findIndex(
-        (p) => p._id === post._id
-      );
-
-      if (updatedPostIndex > -1) {
-        updatedPosts[updatedPostIndex] = post;
-      }
-
-      return updatedPosts;
-    });
-  };
 
   const loadPosts = async (direction) => {
     if (direction) {
