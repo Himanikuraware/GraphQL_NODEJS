@@ -6,10 +6,6 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const multer = require("multer");
-const socketIo = require("./socket");
-
-const feedRoutes = require("./routes/feed");
-const authRoutes = require("./routes/auth");
 
 const MONGODB_URI = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.2tfmflc.mongodb.net/${process.env.DB_DATABASE}`;
 
@@ -53,9 +49,6 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use("/feed", feedRoutes);
-app.use("/auth", authRoutes);
-
 //error handling middleware.
 app.use((error, req, res, next) => {
   const status = error.statusCode || 500;
@@ -70,16 +63,6 @@ app.use((error, req, res, next) => {
 mongoose
   .connect(MONGODB_URI)
   .then((result) => {
-    const server = app.listen(8080);
-    //Socket.io connection.
-    const io = socketIo.init(server, {
-      cors: {
-        origin: "http://localhost:3000",
-        methods: ["GET, POST, PUT, PATCH, DELETE"],
-      },
-    });
-    io.on("connection", (socket) => {
-      console.log("Client connected");
-    });
+    app.listen(8080);
   })
   .catch((err) => console.log(err));
