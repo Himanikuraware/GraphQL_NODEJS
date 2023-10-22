@@ -67,6 +67,7 @@ const Feed = (props) => {
               name
             }
             createdAt
+            imageUrl
           }
           totalPosts
         }}`,
@@ -134,9 +135,23 @@ const Feed = (props) => {
   const finishEditHandler = async (postData) => {
     setEditLoading(true);
     const formData = new FormData();
-    formData.append("title", postData.title);
-    formData.append("content", postData.content);
     formData.append("image", postData.image);
+
+    if (editPost) {
+      formData.append("oldPath", editPost.imagePath);
+    }
+    try {
+      const response = await fetch("http://localhost:8080/post-image", {
+        method: "PUT",
+        headers: {
+          Authorization: props.token,
+          "Content-Type": "application/json",
+        },
+        body: formData,
+      });
+      const resData = await response.json();
+      
+    } catch (err) {}
 
     let graphqlQuery = {
       query: `
@@ -176,6 +191,7 @@ const Feed = (props) => {
         title: resData.data.createPost.title,
         content: resData.data.createPost.content,
         creator: resData.data.createPost.creator,
+        imagePath: resData.data.createPost.imageUrl,
         createdAt: resData.data.createPost.createdAt,
       };
       this.setState((prevState) => {
