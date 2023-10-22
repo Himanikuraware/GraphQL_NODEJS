@@ -122,33 +122,45 @@ const Feed = (props) => {
     formData.append("content", postData.content);
     formData.append("image", postData.image);
 
-    let url = "http://localhost:8080/feed/post";
-    let method = "POST";
-    if (editPost) {
-      url = `http://localhost:8080/feed/post/${editPost._id}`;
-      method = "PUT";
-    }
+    let graphqlQuery = {
+      query: `
+      mutation {
+        createPost(postInput: {title: "${postData.title}", content: "${postData.content}", imageUrl: "somestring"}) {
+          _id
+          title
+          content
+          imageUrl
+          creator {
+            name
+          }
+          createdAt
+        }
+      }
+      `,
+    };
 
     try {
-      const response = await fetch(url, {
-        method: method,
-        body: formData,
+      const response = await fetch("http://localhost:8080/graphql", {
+        method: "POST",
+        body: JSON.stringify(graphqlQuery),
         headers: {
           Authorization: props.token,
+          "Content-Type": "application/json",
         },
       });
-
-      if (response.status !== 200 && response.status !== 201) {
-        throw new Error("Creating or editing a post failed!");
-      }
-
       const resData = await response.json();
+      if (resData.errors && resData.errors[0].status === 422) {
+        throw new Error("Validation failed!");
+      }
+      if (resData.errors) {
+        throw new Error("User login failed.");
+      }
       const post = {
-        _id: resData.post._id,
-        title: resData.post.title,
-        content: resData.post.content,
-        creator: resData.post.creator,
-        createdAt: resData.post.createdAt,
+        _id: resData.data.createPost._id,
+        title: resData.data.createPost.title,
+        content: resData.data.createPost.content,
+        creator: resData.data.createPost.creator,
+        createdAt: resData.data.createPost.createdAt,
       };
 
       setIsEditing(false);
