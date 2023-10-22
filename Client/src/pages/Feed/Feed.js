@@ -55,21 +55,37 @@ const Feed = (props) => {
     }
 
     try {
-      const response = await fetch(
-        `http://localhost:8080/feed/posts?page=${page}`,
-        {
-          headers: {
-            Authorization: props.token,
-          },
-        }
-      );
-
-      if (response.status !== 200) {
-        throw new Error("Failed to fetch posts.");
-      }
+      const graphqlQuery = {
+        query: `
+        { 
+          getPosts(page: ${page}) {
+          posts {
+            _id
+            title
+            content
+            creator {
+              name
+            }
+            createdAt
+          }
+          totalPosts
+        }}`,
+      };
+      const response = await fetch(`http://localhost:8080/graphql`, {
+        method: "POST",
+        headers: {
+          Authorization: props.token,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(graphqlQuery),
+      });
 
       const resData = await response.json();
-      const updatedPosts = resData.posts.map((post) => {
+      if (resData.errors) {
+        throw new Error("Fetching posts failed.");
+      }
+
+      const updatedPosts = resData.data.getPosts.posts.map((post) => {
         return {
           ...post,
           imagePath: post.imageUrl,
@@ -77,7 +93,7 @@ const Feed = (props) => {
       });
 
       setPosts(updatedPosts);
-      setTotalPosts(resData.totalItems);
+      setTotalPosts(resData.data.getPosts.totalPosts);
       setPostsLoading(false);
     } catch (err) {
       catchError(err);
@@ -162,6 +178,41 @@ const Feed = (props) => {
         creator: resData.data.createPost.creator,
         createdAt: resData.data.createPost.createdAt,
       };
+      this.setState((prevState) => {
+        let updatedPosts = [...prevState.posts];
+        if (prevState.editPost) {
+          const postIndex = prevState.posts.findIndex(
+            (p) => p._id === prevState.editPost._id
+          );
+          updatedPosts[postIndex] = post;
+        } else {
+          updatedPosts.unshift(post);
+        }
+        return {
+          posts: updatedPosts,
+          isEditing: false,
+          editPost: null,
+          editLoading: false,
+        };
+      });
+      setPosts((prevPosts) => {
+        let updatedPosts = [...prevPosts];
+
+        if (editPost) {
+          const postIndex = prevPosts.findIndex((p) => p._id === editPost._id);
+
+          if (postIndex !== -1) {
+            updatedPosts[postIndex] = post;
+          } else {
+            updatedPosts.unshift(post);
+          }
+        } else {
+          updatedPosts.pop();
+          updatedPosts.unshift(post);
+        }
+
+        return updatedPosts;
+      });
 
       setIsEditing(false);
       setEditPost(null);
@@ -198,8 +249,6 @@ const Feed = (props) => {
       }
 
       const resData = await response.json();
-      // const updatedPosts = posts.filter((p) => p._id !== postId);
-      // setPosts(updatedPosts);
       loadPosts();
       setPostsLoading(false);
       console.log(resData);
